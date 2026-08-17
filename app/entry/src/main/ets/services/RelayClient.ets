@@ -157,11 +157,14 @@ export class RelayClient {
   }
 
   /** Send a method request and resolve with the matching response. */
-  request(method: string, params: object): Promise<ResponseFrame> {
+  request(method: string, params: object, nodeId?: string): Promise<ResponseFrame> {
     return new Promise<ResponseFrame>((resolve) => {
       const id = `req-${++this.seq}`;
       this.pending.set(id, resolve);
       const frame: RequestFrame = { v: PROTOCOL_VERSION, type: 'request', id, method, params };
+      if (nodeId) {
+        frame.nodeId = nodeId;
+      }
       this.sendFrame(frame);
       setTimeout(() => {
         if (this.pending.has(id)) {

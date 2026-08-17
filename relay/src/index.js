@@ -16,6 +16,7 @@ import {
   ROLES,
   ERROR_CODES,
   LOCAL_METHODS,
+  AGGREGATE_METHODS,
   makeError,
   makeFrame,
   newId,
@@ -102,6 +103,12 @@ export function createRelay(config, logger = log) {
       handleLocalMethod(clientId, frame);
       return;
     }
+    // List methods fan out to every node when no nodeId is pinned, so the
+    // app sees "all devices" in one shot with a per-item node tag.
+    if (AGGREGATE_METHODS[frame.method] && !frame.nodeId) {
+      broadcastRequest(clientId, frame);
+      return;
+    }
     const node = pickNode(frame.nodeId);
     if (!node) {
       const client = clients.get(clientId);
@@ -129,6 +136,41 @@ export function createRelay(config, logger = log) {
     }));
   }
 
+  /** Fan a list method out to every online node and aggregate tagged results. */
+  function broadcastRequest(clientId, frame) {
+    if (nodes.size === 0) {
+      const client = clients.get(clientId);
+      if (client) send(client.conn, makeFrame(FRAME_TYPES.RESPONSE, { id: frame.id, ok: true, result: [] }));
+      return;
+    }
+    const record = {
+      clientId,
+      aggregate: true,
+      nodeIds: new Set(nodes.keys()),
+      results: [],
+      timer: setTimeout(() => finalizeAggregate(frame.id), config.requestTimeoutMs),
+    };
+    pending.set(frame.id, record);
+    for (const node of nodes.values()) {
+      send(node.conn, makeFrame(FRAME_TYPES.REQUEST, {
+        id: frame.id,
+        method: frame.method,
+        params: frame.params ?? {},
+      }));
+    }
+  }
+
+  function finalizeAggregate(reqId) {
+    const record = pending.get(reqId);
+    if (!record) return;
+    pending.delete(reqId);
+    clearTimeout(record.timer);
+    const client = clients.get(record.clientId);
+    if (client) {
+      send(client.conn, makeFrame(FRAME_TYPES.RESPONSE, { id: reqId, ok: true, result: record.results }));
+    }
+  }
+
   function handleLocalMethod(clientId, frame) {
     const client = clients.get(clientId);
     if (!client) return;
@@ -148,6 +190,20 @@ export function createRelay(config, logger = log) {
   function handleResponseFromNode(nodeId, frame) {
     const record = pending.get(frame.id);
     if (!record) return;
+    if (record.aggregate) {
+      if (frame.ok === true && Array.isArray(frame.result)) {
+        const node = nodes.get(nodeId);
+        const tag = { nodeId, nodeName: node?.name ?? "", hostname: node?.hostname ?? "" };
+        for (const item of frame.result) {
+          record.results.push({ ...item, ...tag });
+        }
+      }
+      record.nodeIds.delete(nodeId);
+      if (record.nodeIds.size === 0) {
+        finalizeAggregate(frame.id);
+      }
+      return;
+    }
     pending.delete(frame.id);
     clearTimeout(record.timer);
     const client = clients.get(record.clientId);
@@ -178,12 +234,18 @@ export function createRelay(config, logger = log) {
     }
   }
 
-  function handleEventFromNode(_nodeId, frame) {
+  function handleEventFromNode(nodeId, frame) {
+    const node = nodes.get(nodeId);
     const out = makeFrame(FRAME_TYPES.EVENT, {
       id: frame.id ?? newId(),
       event: frame.event,
       sessionId: frame.sessionId,
-      data: frame.data,
+      nodeId,
+      data: {
+        ...(frame.data ?? {}),
+        nodeName: node?.name ?? "",
+        hostname: node?.hostname ?? "",
+      },
     });
     broadcastToClients(out);
     if (frame.event === "turn.end") {

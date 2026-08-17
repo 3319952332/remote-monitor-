@@ -17,7 +17,8 @@ export function summarizeTurnEnd(msg) {
   const reason = data.reason ?? {};
   const kind = reason.kind ?? "unknown";
   const session = String(msg.sessionId ?? "?").slice(-8);
-  return `会话 ${session} 回合 #${data.turn ?? "?"} 完成（${kind}）`;
+  const device = data.hostname || data.nodeName || "未知设备";
+  return `【${device}】会话 ${session} 回合 #${data.turn ?? "?"} 完成（${kind}）`;
 }
 
 /**

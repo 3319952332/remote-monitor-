@@ -84,8 +84,9 @@ struct MonitorHome {
     if (event === 'turn.end') {
       const d = data as TurnEndData;
       const kind = d.reason?.kind ?? 'done';
-      // tray notification (no AGC)
-      NotificationService.notifyCompletion(sessionId, d.turn, kind);
+      const device = d.hostname ?? d.nodeName ?? '';
+      // tray notification (no AGC), tagged with the source device
+      NotificationService.notifyCompletion(sessionId, d.turn, kind, device);
       // refresh the session list to reflect the finished turn
       this.loadSessions();
     }
@@ -126,7 +127,7 @@ struct MonitorHome {
                 Text(w.title)
                   .fontSize(16)
                   .fontWeight(FontWeight.Medium)
-                Text(w.path)
+                Text(`${w.hostname ?? w.nodeName ?? '未知设备'} · ${w.path}`)
                   .fontSize(11)
                   .fontColor('#999')
                   .maxLines(1)
@@ -144,7 +145,7 @@ struct MonitorHome {
             .backgroundColor('#f7f8fa')
             .margin({ bottom: 8 })
             .onClick(() => {
-              router.pushUrl({ url: 'pages/WorkspaceBrowser', params: { path: w.path, title: w.title } });
+              router.pushUrl({ url: 'pages/WorkspaceBrowser', params: { path: w.path, title: w.title, nodeId: w.nodeId ?? '' } });
             })
           }
         }, (w: WorkspaceInfo) => w.id)
@@ -176,7 +177,7 @@ struct MonitorHome {
                   .fontWeight(FontWeight.Medium)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
-                Text(`${this.sessionTime(s)}  ·  ${s.cwd}`)
+                Text(`${s.hostname ?? s.nodeName ?? '未知设备'} · ${this.sessionTime(s)}`)
                   .fontSize(11)
                   .fontColor('#999')
                   .maxLines(1)
@@ -197,7 +198,7 @@ struct MonitorHome {
             .backgroundColor(s.running ? '#f4f9ff' : '#f7f8fa')
             .margin({ bottom: 8 })
             .onClick(() => {
-              router.pushUrl({ url: 'pages/SessionDetail', params: { sessionId: s.id } });
+              router.pushUrl({ url: 'pages/SessionDetail', params: { sessionId: s.id, nodeId: s.nodeId ?? '' } });
             })
           }
         }, (s: SessionInfo) => s.id)
