@@ -66,6 +66,15 @@ Copy-Item -Recurse -Force "E:\Code\Huawei\dsh-remote\plugin" $dst
 - 鉴权 token 用环境变量 `DSH_RELAY_TOKEN`（与 App 的 local.json 里一致）。
 - webhook 兜底：`DSH_RELAY_NOTIFIERS` 环境变量（ServerChan/WeCom/邮件）。
 
+### 3.1 多节点（多 DSH 终端）
+
+架构：App 连的是 relay，**节点对 App 透明**，区分靠 relay 下发时打 tag。
+
+- 事件（`turn.end` / `session.event` / `node.online/offline`）都带 `nodeId` + `nodeName` + `hostname`。
+- 列表方法（`session.list` / `workspace.list` / `agent.list`）不指定 nodeId 时，relay 会**广播给所有节点并聚合**，每条结果打节点 tag。
+- App 主页全展示、完成通知带 `【设备名】`；点进会话/工作区会带上该条目的 `nodeId`，后续定向操作（`session.history`/`prompt`/`fs.*`）精确路由到对应节点，不会串设备。
+- **多台终端要能区分**：每台机器在 `cordis.patch.yml` 里给插件配不同的 `name:`（或删掉 `name:` 让它用 hostname）。否则多台都叫 `my-dsh`，只能靠 hostname 区分。
+
 ---
 
 ## 4. 通知行为（已完成，别改回去）
