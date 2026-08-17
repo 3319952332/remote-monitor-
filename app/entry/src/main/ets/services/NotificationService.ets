@@ -67,7 +67,7 @@ export class NotificationService {
         notificationSlotType: notificationManager.SlotType.SOCIAL_COMMUNICATION,
         content: content,
         notificationFlags: {
-          soundEnabled: 2,
+          soundEnabled: 1,
           vibrationEnabled: 2,
           bannerEnabled: 1,
         },

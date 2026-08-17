@@ -31,3 +31,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local signing config (contains key password + absolute user paths)
+app/build-profile.json5

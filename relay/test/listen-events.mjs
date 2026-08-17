@@ -7,7 +7,7 @@
  */
 import WebSocket from "ws";
 
-const TOKEN = "dsh-remote-dev-token";
+const TOKEN = process.env.DSH_RELAY_TOKEN ?? "your-secret-token";
 const URL = "ws://127.0.0.1:8787";
 const DURATION_MS = 30000;
 

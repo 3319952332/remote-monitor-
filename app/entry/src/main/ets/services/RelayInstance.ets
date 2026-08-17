@@ -5,10 +5,10 @@
 import { RelayClient } from './RelayClient';
 
 /** Relay server address. LAN: ws://<server-ip>:8787 (needs cleartext). Public: wss://... */
-export const RELAY_URL: string = 'ws://192.168.31.5:8787';
+export const RELAY_URL: string = 'ws://<YOUR_LAN_IP>:8787';
 
 /** Shared auth token — must match the relay server's DSH_RELAY_TOKEN. */
-export const RELAY_TOKEN: string = 'dsh-remote-dev-token';
+export const RELAY_TOKEN: string = '<YOUR_TOKEN>';
 
 export const DEVICE_NAME: string = 'HarmonyOS';
 
