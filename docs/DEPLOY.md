@@ -75,6 +75,16 @@ Copy-Item -Recurse -Force "E:\Code\Huawei\dsh-remote\plugin" $dst
 - App 主页全展示、完成通知带 `【设备名】`；点进会话/工作区会带上该条目的 `nodeId`，后续定向操作（`session.history`/`prompt`/`fs.*`）精确路由到对应节点，不会串设备。
 - **多台终端要能区分**：每台机器在 `cordis.patch.yml` 里给插件配不同的 `name:`（或删掉 `name:` 让它用 hostname）。否则多台都叫 `my-dsh`，只能靠 hostname 区分。
 
+### 3.2 relay 网卡 / 跨子网（新增节点必读）
+
+relay 绑 `0.0.0.0:8787`，会监听**本机所有网卡**。这台 relay 机器有多块真实网卡、各在不同 /24 子网（如 WLAN 一块、以太网一块），**跨子网互不可达**。
+
+- 新增节点**必须按自己所在子网**选 relayUrl：连 relay 机器上「和自己同子网」的那块网卡 IP，连错网卡（如连到 WLAN IP）会一直连不上。
+- 判断方法：在 relay 机器上 `ipconfig` / `Get-NetIPAddress` 看各网卡 IP；节点机器能 `ping` 通哪个 relay IP，就用哪个。
+- 本机 DSH 与 relay 同机，用 `ws://127.0.0.1:8787` 即可（现有 `my-dsh` 节点即如此）。
+- 防火墙：各网卡均为 `Private` 网络类别，且已有 `Node.js JavaScript Runtime` 入站放行规则（TCP 8787），新增节点无需再开端口。
+- 具体每块网卡的 IP 属本机局域网信息，不进 git；真值见 relay 机器 `ipconfig`，或临时写进 `app/relay-config.local.json`（已 gitignore）供构建时读。
+
 ---
 
 ## 4. 通知行为（已完成，别改回去）
