@@ -52,7 +52,7 @@ SDK 文档配置（历史 FA 模型是 `deviceConfig.network.cleartextTraffic: t
 
 ```ts
 export const RELAY_URL = 'ws://192.168.1.100:8787';  // 改成 relay 实际地址
-export const RELAY_TOKEN = 'dsh-remote-dev-token';    // 与 relay 一致
+export const RELAY_TOKEN = 'your-secret-token';        // 与 relay 一致
 ```
 
 ### 5. 编译运行
