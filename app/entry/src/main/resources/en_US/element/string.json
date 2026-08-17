@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "DSH remote monitor module"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "DSH session monitor"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "DSH Monitor"
+    },
+    {
+      "name": "keep_background_reason",
+      "value": "Keep running in background to receive session completion notifications"
+    }
+  ]
+}

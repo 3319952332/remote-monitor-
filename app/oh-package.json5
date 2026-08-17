@@ -1,0 +1,8 @@
+{
+  "modelVersion": "5.0.0",
+  "description": "AITest - FileUploadServer 鸿蒙客户端",
+  "dependencies": {
+  },
+  "devDependencies": {
+  }
+}

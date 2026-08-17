@@ -1,0 +1,12 @@
+{
+  "name": "dsh-remote-monitor",
+  "version": "0.1.0",
+  "description": "DSH monitor plugin: exposes sessions/workspace/files APIs and pushes session events to a relay server over an outbound WebSocket",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT"
+}
