@@ -18,12 +18,14 @@ struct SessionDetail {
   @State loadError: string = '';
   @State truncated: boolean = false;
   @State running: boolean = false;
+  @State nodeId: string = '';
   private pollTimer: number = -1;
   private scroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
     const params = router.getParams() as Record<string, Object>;
     this.sessionId = (params['sessionId'] ?? '') as string;
+    this.nodeId = (params['nodeId'] ?? '') as string;
     this.loadHistory();
   }
 
@@ -42,7 +44,7 @@ struct SessionDetail {
 
   /** Pull history + running state; drives the polling loop while the AI replies. */
   async fetchHistory(): Promise<void> {
-    const resp = await relay.request('session.history', { sessionId: this.sessionId, fromSeq: 0 } as SessionHistoryParams);
+    const resp = await relay.request('session.history', { sessionId: this.sessionId, fromSeq: 0 } as SessionHistoryParams, this.nodeId.length > 0 ? this.nodeId : undefined);
     if (!resp.ok) {
       this.loadError = resp.error?.message ?? '加载失败';
       this.stopPolling();
@@ -93,7 +95,7 @@ struct SessionDetail {
       return;
     }
     this.sending = true;
-    const resp = await relay.request('session.prompt', { sessionId: this.sessionId, text: text } as SessionPromptParams);
+    const resp = await relay.request('session.prompt', { sessionId: this.sessionId, text: text } as SessionPromptParams, this.nodeId.length > 0 ? this.nodeId : undefined);
     this.sending = false;
     if (resp.ok) {
       this.inputText = '';

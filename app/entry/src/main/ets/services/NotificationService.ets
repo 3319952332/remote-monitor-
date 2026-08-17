@@ -45,10 +45,11 @@ export class NotificationService {
     }
   }
 
-  /** Post a "session completed" notification. */
-  static notifyCompletion(sessionId: string, turn: number, kind: string): void {
+  /** Post a "session completed" notification, tagged with the source device. */
+  static notifyCompletion(sessionId: string, turn: number, kind: string, device: string = ''): void {
     const short: string = sessionId.length > 8 ? sessionId.slice(-8) : sessionId;
-    NotificationService.publish('会话完成', `会话 ${short} 回合 #${turn} 完成（${kind}）`);
+    const prefix: string = device.length > 0 ? `【${device}】` : '';
+    NotificationService.publish('会话完成', `${prefix}会话 ${short} 回合 #${turn} 完成（${kind}）`);
   }
 
   /** Publish a basic-text tray notification. */

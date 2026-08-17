@@ -11,6 +11,7 @@ import { WorkspaceInfo, EmptyParams, SessionCreateParams, SessionPromptParams } 
 struct NewSession {
   @State workspaces: WorkspaceInfo[] = [];
   @State cwd: string = '';
+  @State nodeId: string = '';
   @State text: string = '';
   @State creating: boolean = false;
 
@@ -24,6 +25,7 @@ struct NewSession {
       this.workspaces = resp.result as WorkspaceInfo[];
       if (this.workspaces.length > 0 && this.cwd.length === 0) {
         this.cwd = this.workspaces[0].path;
+        this.nodeId = this.workspaces[0].nodeId ?? '';
       }
     }
   }
@@ -34,7 +36,7 @@ struct NewSession {
       return;
     }
     this.creating = true;
-    const resp = await relay.request('session.create', { cwd: this.cwd } as SessionCreateParams);
+    const resp = await relay.request('session.create', { cwd: this.cwd } as SessionCreateParams, this.nodeId.length > 0 ? this.nodeId : undefined);
     this.creating = false;
     if (!resp.ok) {
       promptAction.showToast({ message: resp.error?.message ?? '创建失败' });
@@ -45,7 +47,7 @@ struct NewSession {
 
     const firstText = this.text.trim();
     if (firstText.length > 0) {
-      await relay.request('session.prompt', { sessionId: sessionId, text: firstText } as SessionPromptParams);
+      await relay.request('session.prompt', { sessionId: sessionId, text: firstText } as SessionPromptParams, this.nodeId.length > 0 ? this.nodeId : undefined);
     }
     promptAction.showToast({ message: `已创建 ${sessionId.slice(-8)}` });
     router.back();
@@ -80,7 +82,7 @@ struct NewSession {
               Text(w.title)
                 .fontSize(15)
               Blank()
-              Text(w.path)
+              Text(`${w.hostname ?? w.nodeName ?? '未知设备'} · ${w.path}`)
                 .fontSize(11)
                 .fontColor('#999')
                 .maxLines(1)
@@ -92,7 +94,7 @@ struct NewSession {
             .backgroundColor(this.cwd === w.path ? '#e6f2ff' : '#f7f8fa')
             .border({ width: this.cwd === w.path ? 1 : 0, color: '#007dff' })
             .margin({ bottom: 8 })
-            .onClick(() => { this.cwd = w.path; })
+            .onClick(() => { this.cwd = w.path; this.nodeId = w.nodeId ?? ''; })
           }
         }, (w: WorkspaceInfo) => w.id)
       }

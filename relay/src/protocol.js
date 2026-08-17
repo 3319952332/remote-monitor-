@@ -35,6 +35,14 @@ export const LOCAL_METHODS = Object.freeze({
   "node.list": true,
 });
 
+/** List methods the relay fans out to every online node, aggregating the
+ *  results with a per-item `nodeId`/`nodeName`/`hostname` tag. */
+export const AGGREGATE_METHODS = Object.freeze({
+  "workspace.list": true,
+  "session.list": true,
+  "agent.list": true,
+});
+
 export function newId() {
   return randomUUID();
 }

@@ -12,6 +12,7 @@ import { SessionInfo, SessionListParams } from '../model/Protocol';
 struct WorkspaceBrowser {
   @State path: string = '';
   @State wsTitle: string = '';
+  @State nodeId: string = '';
   @State sessions: SessionInfo[] = [];
   @State loading: boolean = false;
 
@@ -19,12 +20,13 @@ struct WorkspaceBrowser {
     const params = router.getParams() as Record<string, Object>;
     this.path = (params['path'] ?? '') as string;
     this.wsTitle = (params['title'] ?? '') as string;
+    this.nodeId = (params['nodeId'] ?? '') as string;
     this.loadSessions();
   }
 
   async loadSessions(): Promise<void> {
     this.loading = true;
-    const resp = await relay.request('session.list', { cwd: this.path } as SessionListParams);
+    const resp = await relay.request('session.list', { cwd: this.path } as SessionListParams, this.nodeId.length > 0 ? this.nodeId : undefined);
     this.loading = false;
     if (resp.ok && resp.result) {
       this.sessions = resp.result as SessionInfo[];

@@ -79,6 +79,9 @@ export interface WorkspaceInfo {
   sessionIds: string[];
   createdAt: string;
   updatedAt: string;
+  nodeId?: string;
+  nodeName?: string;
+  hostname?: string;
 }
 
 export interface SessionInfo {
@@ -92,6 +95,9 @@ export interface SessionInfo {
   agentPreset?: string;
   live: boolean;
   title?: string | null;
+  nodeId?: string;
+  nodeName?: string;
+  hostname?: string;
 }
 
 export interface AgentInfo {
@@ -117,6 +123,8 @@ export interface SessionEventInfo {
 export interface TurnEndData {
   turn: number;
   reason: TurnEndReason;
+  nodeName?: string;
+  hostname?: string;
 }
 
 export interface TurnEndReason {
