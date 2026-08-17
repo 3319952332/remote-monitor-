@@ -86,7 +86,7 @@ Copy-Item -Recurse -Force "E:\Code\Huawei\dsh-remote\plugin" $dst
 ### 3.2 节点清单
 
 - `my-dsh`：本机（Windows），`name: my-dsh`。
-- `laowang`：另一台 Linux (Ubuntu) 机器，经 SSH 访问（入口在本机 `~/.ssh/config` 里，用户 `laowang`）。插件已装 `dsh-remote-monitor-v7`，`name: laowang`。上线后 relay 里显示为 `laowang@ubuntu`。重启 DSH：`ssh ... kill <pid>; nohup node ~/.npm/_npx/1e7f6d9597241db0/node_modules/.bin/dsh --profile web --host 127.0.0.1 --port 3080 > /tmp/dsh.log 2>&1 &`
+- `laowang`：另一台 Linux (Ubuntu) 机器，经 SSH 访问（入口在本机 `~/.ssh/config` 里，用户 `laowang`）。插件已装 `dsh-remote-monitor-v7`，`name: laowang`。上线后 relay 里显示为 `laowang@ubuntu`。**DSH 由 systemd 用户服务托管**：`systemctl --user status dsh-remote`（`Restart=always` 崩溃自愈），每日凌晨定时重启（`dsh-remote-restart.timer`）。
 
 > **新增节点标准步骤**：`scp -r plugin <node>:/tmp/x` → ssh `mv /tmp/x ~/.dsh/profiles/node_modules/dsh-remote-monitor-vN` → 把 `insert` 段追加到 `<node>:~/.dsh/profiles/web/cordis.patch.yml`（`relayUrl` 统一用 `wss://console.sub.opengm.top`，`token` 同 `app/relay-config.local.json`，`name` 给唯一名）。DSH 热加载后，relay 日志出现 `node online: <name>@<hostname>` 即成功；不用 npm install（插件无第三方依赖，`@deepseek-ai/*` 由 DSH 自己的树解析）。如果热加载不生效，重启 DSH 进程。
 
