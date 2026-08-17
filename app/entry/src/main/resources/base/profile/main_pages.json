@@ -1,0 +1,8 @@
+{
+  "src": [
+    "pages/MonitorHome",
+    "pages/SessionDetail",
+    "pages/NewSession",
+    "pages/WorkspaceBrowser"
+  ]
+}

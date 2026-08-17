@@ -1,0 +1,33 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# HarmonyOS / DevEco Studio
+build/
+.hvigor/
+oh_modules/
+.cxx/
+*.har
+*.hsp
+
+# IDE
+.idea/
+*.iml
+local.properties
+
+# Signing material (private keys must never be committed)
+*.p12
+*.p7b
+*.cer
+*.csr
+*.jks
+*.keystore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

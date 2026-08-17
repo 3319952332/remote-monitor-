@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "DSH 远程监控模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "DSH 会话监控能力"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "DSH 监控"
+    },
+    {
+      "name": "keep_background_reason",
+      "value": "保持后台连接以接收会话完成通知"
+    }
+  ]
+}

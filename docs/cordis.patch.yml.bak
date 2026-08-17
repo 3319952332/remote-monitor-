@@ -1,0 +1,26 @@
+# Your patch layer for this dsh profile, applied after every bundle layer:
+# a top-level YAML array of loader patch entries (id-targeted config
+# overrides, disables, and insert lists; `!!js` expressions allowed).
+#
+# ── MiniMax coding-plan web search (custom) ────────────────────────────────────
+# Replaces the stock DeepSeek search provider with a direct-API provider
+# (package: ~/.dsh/plugins/dsh-web-search-minimax, active copy in
+# ~/.dsh/profiles/node_modules/dsh-web-search-minimax). See
+# ~/.dsh/patches/README.md before updating or removing these three rows.
+
+# 1. Disable the stock DeepSeek search provider row (base bundle).
+- id: web-search-deepseek
+  disabled: true
+
+# 2. Point the web seam at the new provider (replaces the row's whole config).
+- id: web
+  config:
+    searchProvider: minimax-coding-plan
+
+# 3. Mount the provider plugin.
+- insert:
+    - id: web-search-minimax
+      name: dsh-web-search-minimax
+      config:
+        apiKeyEnv: MINIMAX_CN_API_KEY
+        baseURL: https://api.minimaxi.com

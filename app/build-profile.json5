@@ -1,0 +1,50 @@
+{
+  app: {
+    signingConfigs: [
+      {
+        name: 'default',
+        type: 'HarmonyOS',
+        material: {
+          certpath: 'C:\\Users\\wang\\.ohos\\config\\default_app_GuANMqHGkd1PxOLxrXordmNUvCztWhEqeA8xD4gjX4=.cer',
+          keyAlias: 'debugKey',
+          keyPassword: '0000001bdb79cc07b44699ee437168ec97848f282de604ca4ccde27a5809e1304e6768e8d2e50637726650',
+          profile: 'C:\\Users\\wang\\.ohos\\config\\default_app_GuANMqHGkd1PxOLxrXordmNUvCztWhEqeA8xD4gjX4=.p7b',
+          signAlg: 'SHA256withECDSA',
+          storeFile: 'C:\\Users\\wang\\.ohos\\config\\default_app_GuANMqHGkd1PxOLxrXordmNUvCztWhEqeA8xD4gjX4=.p12',
+          storePassword: '0000001bdb79cc07b44699ee437168ec97848f282de604ca4ccde27a5809e1304e6768e8d2e50637726650',
+        },
+      },
+    ],
+    products: [
+      {
+        name: 'default',
+        signingConfig: 'default',
+        compatibleSdkVersion: '6.1.1(24)',
+        targetSdkVersion: '6.1.1(24)',
+        runtimeOS: 'HarmonyOS',
+      },
+    ],
+    buildModeSet: [
+      {
+        name: 'debug',
+      },
+      {
+        name: 'release',
+      },
+    ],
+  },
+  modules: [
+    {
+      name: 'entry',
+      srcPath: './entry',
+      targets: [
+        {
+          name: 'default',
+          applyToProducts: [
+            'default',
+          ],
+        },
+      ],
+    },
+  ],
+}
