@@ -34,3 +34,7 @@ Thumbs.db
 
 # Local signing config (contains key password + absolute user paths)
 app/build-profile.json5
+
+# Local relay connection config (real URL/token) + generated ArkTS constants
+app/relay-config.local.json
+app/entry/src/main/ets/services/RelayConfig.ets

@@ -1,14 +1,11 @@
 /**
- * Global relay client singleton + connection config.
- * Edit RELAY_URL / RELAY_TOKEN before building.
+ * Global relay client singleton.
+ * Connection config is injected by gen-relay-config.mjs into RelayConfig.ets
+ * (source: relay-config.local.json, which is gitignored). Never hardcode real
+ * URL/token here.
  */
 import { RelayClient } from './RelayClient';
-
-/** Relay server address. LAN: ws://<server-ip>:8787 (needs cleartext). Public: wss://... */
-export const RELAY_URL: string = 'ws://<YOUR_LAN_IP>:8787';
-
-/** Shared auth token — must match the relay server's DSH_RELAY_TOKEN. */
-export const RELAY_TOKEN: string = '<YOUR_TOKEN>';
+import { RELAY_URL, RELAY_TOKEN } from './RelayConfig';
 
 export const DEVICE_NAME: string = 'HarmonyOS';
 
