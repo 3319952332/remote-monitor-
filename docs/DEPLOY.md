@@ -85,6 +85,13 @@ relay 绑 `0.0.0.0:8787`，会监听**本机所有网卡**。这台 relay 机器
 - 防火墙：各网卡均为 `Private` 网络类别，且已有 `Node.js JavaScript Runtime` 入站放行规则（TCP 8787），新增节点无需再开端口。
 - 具体每块网卡的 IP 属本机局域网信息，不进 git；真值见 relay 机器 `ipconfig`，或临时写进 `app/relay-config.local.json`（已 gitignore）供构建时读。
 
+### 3.3 节点清单
+
+- `my-dsh`：本机（Windows，与 relay 同机），`relayUrl: ws://127.0.0.1:8787`，`name: my-dsh`。
+- `laowang`：另一台 Linux (Ubuntu) 机器，经 SSH 访问（入口在本机 `~/.ssh/config` 里，用户 `laowang`）。插件已装 `dsh-remote-monitor-v7`，`name: laowang`，`relayUrl` 指向 relay 机器的**以太网网卡** IP（与该节点同子网）。上线后 relay 里显示为 `laowang@ubuntu`。
+
+> **新增节点标准步骤**：`scp -r plugin <node>:/tmp/x` → ssh `mv /tmp/x ~/.dsh/profiles/node_modules/dsh-remote-monitor-vN` → 把 `insert` 段追加到 `<node>:~/.dsh/profiles/web/cordis.patch.yml`（`relayUrl` 按该节点所在子网选 relay 网卡 IP，`name` 给唯一名）。DSH 热加载后，relay 日志出现 `node online: <name>@<hostname>` 即成功；不用 npm install（插件无第三方依赖，`@deepseek-ai/*` 由 DSH 自己的树解析）。
+
 ---
 
 ## 4. 通知行为（已完成，别改回去）
