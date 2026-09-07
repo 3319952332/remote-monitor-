@@ -9,6 +9,11 @@
  * Install: copy this package into ~/.dsh/profiles/node_modules/, then add an
  * `insert` row to ~/.dsh/profiles/web/cordis.patch.yml (see README).
  *
+ * 版本兼容（0.1.4+）：DSH 0.1.3 把 session persistence API 从
+ * `sessionPersistence.readFrom(id, seq)` 改成生命周期持有的 `SessionHandle`
+ * （`open(id, "read")` → `handle.read(seq)` → `handle.close()`）。冷会话读取统一
+ * 走 `readPersistedSession()`（自动探测新旧 API，两个 DSH 版本同一构建可用）。
+ *
  * @module dsh-remote-monitor
  */
 import { randomUUID } from "node:crypto";
@@ -18,6 +23,7 @@ import z from "@deepseek-ai/schemastery";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import { SessionId } from "@deepseek-ai/dsh-session";
 import { installModelSelection } from "@deepseek-ai/dsh-agent";
+import { readPersistedSession } from "./persistence-bridge.js";
 
 /** Stable Cordis plugin id. */
 const name = "remote-monitor";
@@ -408,7 +414,7 @@ function apply(ctx, config) {
       if (live) {
         events = live.events;
       } else {
-        const read = await ctx.sessionPersistence.readFrom(sessionId, 0);
+        const read = await readPersistedSession(ctx.sessionPersistence, sessionId);
         events = read.events;
       }
       for (const e of events) {
@@ -437,7 +443,7 @@ function apply(ctx, config) {
       meta = live.header;
       all = live.events;
     } else {
-      const read = await ctx.sessionPersistence.readFrom(sessionId, 0);
+      const read = await readPersistedSession(ctx.sessionPersistence, sessionId);
       meta = read.meta;
       all = read.events;
     }
@@ -640,7 +646,7 @@ function apply(ctx, config) {
       return null;
     }
     try {
-      const read = await ctx.sessionPersistence.readFrom(sessionId, 0);
+      const read = await readPersistedSession(ctx.sessionPersistence, sessionId);
       const events = read.events ?? [];
       for (let i = events.length - 1; i >= 0; i--) {
         const e = events[i];
@@ -1225,4 +1231,4 @@ function apply(ctx, config) {
   });
 }
 
-export { Config, apply, inject, name };
+export { Config, apply, inject, name, readPersistedSession };

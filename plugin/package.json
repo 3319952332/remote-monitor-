@@ -1,6 +1,6 @@
 {
   "name": "dsh-remote-monitor",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "DSH 远程监控插件：提供 sessions/workspace/files 相关 API，并通过出站 WebSocket 将会话事件推送到中继服务器",
   "type": "module",
   "main": "lib/index.js",
