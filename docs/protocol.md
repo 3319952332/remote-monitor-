@@ -37,13 +37,35 @@ WebSocket，文本帧，负载为 UTF-8 JSON。协议版本号 `v: 1`。
   "name":"my-dsh", "hostname":"PC", "platform":"win32", "pid":1234, "version":"0.1.0" }
 
 // client → relay
+// deviceId 是稳定设备标识（App 取 ODID），relay 用它当推送登记表的键；
+// deviceName 只是展示名，每个安装都一样，不能拿来当键。
+// pushToken 是 Push Kit token，由 relay 在无前台客户端时用来推送。
 { "v":1, "type":"hello", "role":"client", "token":"<secret>",
-  "deviceName":"Mate60", "platform":"harmonyos" }
+  "deviceName":"Mate60", "deviceId":"odid-dff3cdfd-...", "platform":"harmonyos",
+  "pushToken":"<Push Kit token>" }
 
 // relay → node/client
 { "v":1, "type":"welcome", "id":"<连接id>", "role":"node" }
 { "v":1, "type":"error", "code":"AUTH_FAILED", "message":"..." }
 ```
+
+## 应用前后台状态（client → relay）
+
+App 在 `onForeground` / `onBackground` 时上报，让 relay 判断 `turn.end` 要不要推：
+
+```jsonc
+{ "v":1, "type":"app.state", "foreground": false, "pushToken":"<Push Kit token>" }
+```
+
+`turn.end` 的推送条件（`relay/src/index.js` 的 `shouldPush()`）：
+
+| 情况 | 行为 |
+|---|---|
+| 有任一前台 client | 不推（用户正看着屏幕） |
+| 有连接但全部后台 | 推（`DSH_RELAY_PUSH_WHEN_BACKGROUND`） |
+| 无任何连接 = App 已退出 | 推（`DSH_RELAY_PUSH_WHEN_CLOSED`） |
+
+> 推送登记表按 `deviceId` 存 token，**断连不移除**——App 退出正是推送要覆盖的场景。条目在 `DSH_RELAY_PUSH_TOKEN_TTL_MS`（默认 90 天）无刷新后清理，云端报 `80300007`（token 失效）时立即删除。
 
 ## 请求-响应
 

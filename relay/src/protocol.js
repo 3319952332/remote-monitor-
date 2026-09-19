@@ -14,6 +14,12 @@ export const FRAME_TYPES = Object.freeze({
   EVENT: "event",
   PING: "ping",
   PONG: "pong",
+  /**
+   * client → relay: the app reports whether it is in the foreground, so the
+   * relay knows whether a `turn.end` needs a Push Kit banner or was already
+   * seen on screen. Carries { foreground: boolean, pushToken?: string }.
+   */
+  APP_STATE: "app.state",
 });
 
 export const ROLES = Object.freeze({

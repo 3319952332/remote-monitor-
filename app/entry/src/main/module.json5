@@ -11,6 +11,14 @@
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
+    // Push Kit：client_id 必须写字面量，不能用 $string: 资源引用
+    // 取值 = AGC「增长 → 推送服务 → 选择应用」中该应用的 Client ID
+    "metadata": [
+      {
+        "name": "client_id",
+        "value": "6917616843236218365"
+      }
+    ],
     "abilities": [
       {
         "name": "EntryAbility",
@@ -30,7 +38,10 @@
               "entity.system.home"
             ],
             "actions": [
-              "action.system.home"
+              "action.system.home",
+              // Push Kit 必需：声明本 ability 接收推送投递。
+              // 只允许一个 ability 定义该 action；actions 与 uris 不可同处一个对象。
+              "action.ohos.push.listener"
             ]
           }
         ]

@@ -90,13 +90,24 @@ ws.on('error', (_err: BusinessError) => {
 
 设备日志里的 `E NETSTACK: wsi is nullptr, can not trigger` 是 WebSocket 初始化期的**瞬时噪音，非故障**——实测 App 能正常连上。
 
-### 推送能力
+### 离线推送（Push Kit）—— 已打通
 
-见 [`docs/push-feasibility.md`](docs/push-feasibility.md)。摘要：
+完整记录见 [`docs/push-kit-plan.md`](docs/push-kit-plan.md)。结论摘要：
 
-- 当前只有**本地通知**（`NotificationService`），App 被杀则收不到提醒
-- `relay/src/notifiers.js` 的 **webhook 离线通道已实现并接线**（`relay/src/index.js` 中 `turn.end` 触发），只需配 `DSH_RELAY_NOTIFIERS` 环境变量即可启用
-- 真正的离线推送需接华为 Push Kit，成本较高，暂不必要
+- **场景**：不常驻后台，App 退出后靠华为 Push Kit 送达「会话完成」通知。已实测：杀掉 App 后触发 `turn.end`，真机收到推送。
+- **客户端**：`PushTokenService`（取 token）+ `DeviceIdService`（取 ODID 作稳定设备标识）。hello 帧带 `deviceId` + `pushToken`。
+- **relay**：`relay/src/push.js`（签 JWT 调 v3 REST）+ `index.js` 的登记表。按 `deviceId` 存 token，断连不移除；`turn.end` 时**逐设备**判断是否需要推（前台跳过、后台/已退出则推）。
+- **服务端配置**（`/etc/dsh-relay.env`）：`DSH_RELAY_SERVICE_ACCOUNT`、`DSH_RELAY_PUSH_PROJECT_ID`、`DSH_RELAY_PUSH_CATEGORY`。
+
+三个必知的坑：
+
+1. **服务帐号必须是项目级**。判定方法是密钥 JSON 里的 `project_id` 字段有没有值 —— 开发者级为空，会导致 `80200001 Authentication Error`。
+2. **JWT 用 RS256**，官方文档写的 PS256 会被 OAuth 端点拒绝（`jwt verify error`）。
+3. **请求体外层是 `payload`+`target`**，且 `clickAction` 必填，缺了报 `80100003`。
+
+> 通知「响不响」取决于消息分类：默认（营销类）静默，需申请自分类权益才能用 `WORK`（有声+横幅）。当前发的是 `MARKETING`，能到但静默。
+
+`relay/src/notifiers.js` 的 webhook 通道仍然保留可用（配 `DSH_RELAY_NOTIFIERS`），但已不作为主方案。
 
 ### 其他
 

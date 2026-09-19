@@ -17,6 +17,7 @@ import {
   EventFrame,
   HeartbeatFrame,
   HelloFrame,
+  AppStateFrame,
   RequestFrame,
   RelayError,
   EmptyParams,
@@ -28,6 +29,12 @@ export class RelayClient {
   private url: string;
   private token: string;
   private deviceName: string;
+  /** Stable device identity (ODID); keys the relay's push registry. */
+  private deviceId: string;
+  /** Push Kit token; empty until PushTokenService resolves one. */
+  private pushToken: string = '';
+  /** Whether the app is currently in the foreground (relay skips push then). */
+  private foreground: boolean = true;
   private ws: webSocket.WebSocket | null = null;
   private connected: boolean = false;
   private closed: boolean = false;
@@ -56,10 +63,25 @@ export class RelayClient {
     }
   }
 
-  constructor(url: string, token: string, deviceName: string) {
+  constructor(url: string, token: string, deviceName: string, deviceId: string = '') {
     this.url = url;
     this.token = token;
     this.deviceName = deviceName;
+    this.deviceId = deviceId;
+  }
+
+  /**
+   * Set the stable device id before/while connected. Re-hellos when already
+   * connected so the relay can key the push token correctly.
+   */
+  setDeviceId(deviceId: string): void {
+    if (deviceId.length === 0 || deviceId === this.deviceId) {
+      return;
+    }
+    this.deviceId = deviceId;
+    if (this.connected) {
+      this.sendHello();
+    }
   }
 
   /** Start the connection (idempotent). */
@@ -86,6 +108,9 @@ export class RelayClient {
       this.backoffMs = 1000;
       this.onStatus(true, '已连接');
       this.sendHello();
+      // Follow the hello immediately: the relay assumes a fresh client is in
+      // the foreground, and this makes that explicit (and carries the token).
+      this.reportAppState();
       this.startHeartbeat();
     });
 
@@ -121,6 +146,51 @@ export class RelayClient {
       deviceName: this.deviceName,
       platform: 'harmonyos',
     };
+    if (this.deviceId.length > 0) {
+      frame.deviceId = this.deviceId;
+    }
+    if (this.pushToken.length > 0) {
+      frame.pushToken = this.pushToken;
+    }
+    this.sendFrame(frame);
+  }
+
+  /**
+   * Supply the Push Kit token so the relay can reach us when the socket is
+   * down. If already connected, re-handshake so the relay learns it now.
+   */
+  setPushToken(pushToken: string): void {
+    if (pushToken.length === 0 || pushToken === this.pushToken) {
+      return;
+    }
+    this.pushToken = pushToken;
+    if (this.connected) {
+      this.sendHello();
+      this.reportAppState();
+    }
+  }
+
+  /**
+   * Tell the relay whether the app is in the foreground. A `turn.end` that
+   * arrives while the user is looking at the app needs no banner, so this keeps
+   * the relay from double-notifying. No-op when disconnected: the relay already
+   * treats "no socket" as "app gone", which is the state that must push.
+   */
+  reportAppState(foreground?: boolean): void {
+    if (foreground !== undefined) {
+      this.foreground = foreground;
+    }
+    if (!this.connected) {
+      return;
+    }
+    const frame: AppStateFrame = {
+      v: PROTOCOL_VERSION,
+      type: 'app.state',
+      foreground: this.foreground,
+    };
+    if (this.pushToken.length > 0) {
+      frame.pushToken = this.pushToken;
+    }
     this.sendFrame(frame);
   }
 

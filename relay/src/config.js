@@ -38,7 +38,40 @@ function loadConfig(env = process.env) {
      * Wire up ServerChan / WeCom bot / email bridge here; leave empty to disable.
      */
     notifiers: readNotifiers(env),
+    /**
+     * HarmonyOS Push Kit: path to the AGC service-account JSON (project-level
+     * credential). Clients hand their push token to the relay in the hello
+     * frame; the relay uses this to reach them when nobody is in the foreground.
+     * Empty path disables push entirely.
+     */
+    serviceAccountPath: env.DSH_RELAY_SERVICE_ACCOUNT ?? "",
+    /**
+     * AGC project id (推送服务 project id). Required alongside the service
+     * account; the push URL is /v3/{projectId}/messages:send.
+     */
+    pushProjectId: env.DSH_RELAY_PUSH_PROJECT_ID ?? "",
+    /**
+     * Notification category. `WORK` (工作事项提醒) is audible, but requires the
+     * self-classification entitlement in AGC — until it is granted Huawei
+     * rejects/silently downgrades it, so `MARKETING` is the safe default.
+     */
+    pushCategory: env.DSH_RELAY_PUSH_CATEGORY ?? "MARKETING",
+    /** Push when no client is connected, i.e. deliver even to a closed app. */
+    pushWhenAppClosed: boolOf(env.DSH_RELAY_PUSH_WHEN_CLOSED, true),
+    /** Push when clients are connected but every one of them is backgrounded. */
+    pushWhenAppBackground: boolOf(env.DSH_RELAY_PUSH_WHEN_BACKGROUND, true),
+    /**
+     * How long an unused push token is kept. Tokens outlive the socket (that is
+     * the point), so they need an expiry to stop the registry growing forever
+     * as devices are retired. Default 90 days.
+     */
+    pushTokenTtlMs: intOf(env.DSH_RELAY_PUSH_TOKEN_TTL_MS, 90 * 24 * 60 * 60 * 1000),
   };
+}
+
+function boolOf(value, fallback) {
+  if (value === undefined || value === "") return fallback;
+  return !["0", "false", "no", "off"].includes(String(value).toLowerCase());
 }
 
 function readNotifiers(env) {

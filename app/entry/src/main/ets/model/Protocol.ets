@@ -22,6 +22,14 @@ export interface HelloFrame extends RelayFrame {
   platform?: string;
   pid?: number;
   version?: string;
+  /** Push Kit token (clients only) — lets the relay push when offline. */
+  pushToken?: string;
+  /**
+   * Stable device identity (clients only), e.g. ODID. The relay keys its push
+   * registry on this — `deviceName` is identical on every install and would
+   * make two phones overwrite each other's token.
+   */
+  deviceId?: string;
 }
 
 export interface WelcomeFrame extends RelayFrame {
@@ -68,6 +76,17 @@ export interface EventFrame extends RelayFrame {
 export interface HeartbeatFrame extends RelayFrame {
   type: 'ping' | 'pong';
   t: number;
+}
+
+/**
+ * client → relay: reports whether the app is in the foreground, so the relay
+ * can skip a Push Kit banner for a `turn.end` the user is already looking at.
+ */
+export interface AppStateFrame extends RelayFrame {
+  type: 'app.state';
+  foreground: boolean;
+  /** Echoed so a token rotated since the hello is picked up too. */
+  pushToken?: string;
 }
 
 // ── domain payloads ──────────────────────────────────────────────────────
