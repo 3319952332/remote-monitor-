@@ -36,11 +36,29 @@ export const LOCAL_METHODS = Object.freeze({
 });
 
 /** List methods the relay fans out to every online node, aggregating the
- *  results with a per-item `nodeId`/`nodeName`/`hostname` tag. */
+ *  results with a per-item `nodeId`/`nodeName`/`hostname` tag. `session.list`
+ *  is intentionally NOT here anymore: the monitor app always pins a device
+ *  (no "all" tab), so it must hit exactly one node. An unpinned `session.list`
+ *  now routes to the first online node via the default targeted path. */
 export const AGGREGATE_METHODS = Object.freeze({
   "workspace.list": true,
-  "session.list": true,
   "agent.list": true,
+});
+
+/** Targeted methods that the relay tries on every online node when no nodeId
+ *  is pinned, returning the first successful response.  This lets the app
+ *  survive a stale nodeId (e.g. after a plugin hot-reload) by falling back
+ *  to "ask everyone, first hit wins". */
+export const TRY_ALL_METHODS = Object.freeze({
+  "session.history": true,
+  "session.prompt": true,
+  "session.create": true,
+  "session.title": true,
+  "session.usage": true,
+  "session.selectModel": true,
+  "session.permission": true,
+  "session.questions": true,
+  "question.answer": true,
 });
 
 export function newId() {

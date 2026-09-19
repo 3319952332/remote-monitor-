@@ -14,6 +14,12 @@
  * （`open(id, "read")` → `handle.read(seq)` → `handle.close()`）。冷会话读取统一
  * 走 `readPersistedSession()`（自动探测新旧 API，两个 DSH 版本同一构建可用）。
  *
+ * 版本兼容（0.1.5+）：DSH 0.1.5 删除了 `Session.events` 属性，改为
+ * `Session.snapshotEvents()` 方法；`sessionQuery.readTitle()` 返回值也从字符串
+ * 变成标题快照对象。`liveEvents()` 与标题归一化自动探测新旧形态，同一构建
+ * 在 0.1.3/0.1.4/0.1.5 上均可运行（修「打开聊天会话报错 Cannot read properties
+ * of undefined (reading 'length')」——活会话 `live.events` 为 undefined）。
+ *
  * @module dsh-remote-monitor
  */
 import { randomUUID } from "node:crypto";
@@ -23,7 +29,7 @@ import z from "@deepseek-ai/schemastery";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import { SessionId } from "@deepseek-ai/dsh-session";
 import { installModelSelection } from "@deepseek-ai/dsh-agent";
-import { readPersistedSession } from "./persistence-bridge.js";
+import { liveEvents, readPersistedSession } from "./persistence-bridge.js";
 
 /** Stable Cordis plugin id. */
 const name = "remote-monitor";
@@ -351,8 +357,8 @@ function apply(ctx, config) {
       // "Last change" is the last event logged in memory; fall back to the
       // session's creation time when the in-memory log is empty/missing.
       const liveSession = ctx.sessions.get(h.id);
-      const events = liveSession?.events;
-      const last = Array.isArray(events) && events.length > 0 ? events[events.length - 1] : null;
+      const events = liveEvents(liveSession);
+      const last = events.length > 0 ? events[events.length - 1] : null;
       const updatedAt = typeof last?.time === "number" ? last.time : h.createdAt;
       rows.push({
         id: h.id,
@@ -399,8 +405,12 @@ function apply(ctx, config) {
     const sessionId = p.sessionId;
     if (!sessionId) throw new Error("sessionId required");
     try {
-      const title = await ctx.sessionQuery.readTitle(sessionId);
-      if (title && title.trim().length > 0) {
+      // DSH 0.1.5 changed `readTitle`'s return from a plain string to the
+      // title snapshot object `{ title, messageSeqs, source, eventSeq, ... }`.
+      // Accept both shapes so titles resolve correctly on every DSH version.
+      const raw = await ctx.sessionQuery.readTitle(sessionId);
+      const title = typeof raw === "string" ? raw : raw && typeof raw.title === "string" ? raw.title : "";
+      if (title.trim().length > 0) {
         return { sessionId, title };
       }
     } catch {
@@ -412,7 +422,7 @@ function apply(ctx, config) {
       let events;
       const live = ctx.sessions.get(sessionId);
       if (live) {
-        events = live.events;
+        events = liveEvents(live);
       } else {
         const read = await readPersistedSession(ctx.sessionPersistence, sessionId);
         events = read.events;
@@ -441,7 +451,7 @@ function apply(ctx, config) {
     const live = ctx.sessions.get(sessionId);
     if (live) {
       meta = live.header;
-      all = live.events;
+      all = liveEvents(live);
     } else {
       const read = await readPersistedSession(ctx.sessionPersistence, sessionId);
       meta = read.meta;
@@ -556,7 +566,7 @@ function apply(ctx, config) {
     let contextWindow = null;
     let surfaceTokens = null;
     let totalTokens = null;
-    for (const e of live.events) {
+    for (const e of liveEvents(live)) {
       if (e.type === "request/context" && typeof e.data?.contextWindow === "number") {
         contextWindow = e.data.contextWindow;
       }
@@ -1231,4 +1241,4 @@ function apply(ctx, config) {
   });
 }
 
-export { Config, apply, inject, name, readPersistedSession };
+export { Config, apply, inject, liveEvents, name, readPersistedSession };

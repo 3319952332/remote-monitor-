@@ -17,6 +17,7 @@ import {
   ERROR_CODES,
   LOCAL_METHODS,
   AGGREGATE_METHODS,
+  TRY_ALL_METHODS,
   makeError,
   makeFrame,
   newId,
@@ -109,14 +110,32 @@ export function createRelay(config, logger = log) {
       broadcastRequest(clientId, frame);
       return;
     }
+    // Try-all methods: prefer the pinned node when it is still online, but
+    // fall back to "ask every node, first success wins" when the pin is stale
+    // (e.g. a plugin hot-reload reconnects a node under a new id) or absent.
+    // This makes the app survive a stale nodeId instead of answering NO_NODE.
+    if (TRY_ALL_METHODS[frame.method]) {
+      if (frame.nodeId && nodes.has(frame.nodeId)) {
+        forwardToNode(clientId, frame, frame.nodeId);
+      } else {
+        tryAllRequest(clientId, frame);
+      }
+      return;
+    }
+    // Targeted methods (non-try-all) honor the pin strictly.
     const node = pickNode(frame.nodeId);
     if (!node) {
-      const client = clients.get(clientId);
-      if (client) send(client.conn, makeFrame(FRAME_TYPES.RESPONSE, {
-        id: frame.id,
-        ok: false,
-        error: { code: ERROR_CODES.NO_NODE, message: "no online node" },
-      }));
+      sendNoNode(clientId, frame.id);
+      return;
+    }
+    forwardToNode(clientId, frame, node.id);
+  }
+
+  /** Forward one request to a specific online node and await its response. */
+  function forwardToNode(clientId, frame, nodeId) {
+    const record = nodes.get(nodeId);
+    if (!record) {
+      sendNoNode(clientId, frame.id);
       return;
     }
     const timer = setTimeout(() => {
@@ -128,11 +147,21 @@ export function createRelay(config, logger = log) {
         error: { code: ERROR_CODES.NODE_TIMEOUT, message: "node did not respond in time" },
       }));
     }, config.requestTimeoutMs);
-    pending.set(frame.id, { clientId, nodeId: node.id, timer });
-    send(node.conn, makeFrame(FRAME_TYPES.REQUEST, {
+    pending.set(frame.id, { clientId, nodeId, timer });
+    send(record.conn, makeFrame(FRAME_TYPES.REQUEST, {
       id: frame.id,
       method: frame.method,
       params: frame.params ?? {},
+    }));
+  }
+
+  /** Answer a request with the NO_NODE error. */
+  function sendNoNode(clientId, reqId) {
+    const client = clients.get(clientId);
+    if (client) send(client.conn, makeFrame(FRAME_TYPES.RESPONSE, {
+      id: reqId,
+      ok: false,
+      error: { code: ERROR_CODES.NO_NODE, message: "no online node" },
     }));
   }
 
@@ -156,6 +185,49 @@ export function createRelay(config, logger = log) {
         id: frame.id,
         method: frame.method,
         params: frame.params ?? {},
+      }));
+    }
+  }
+
+  /** Try a targeted method on every online node; first success wins. */
+  function tryAllRequest(clientId, frame) {
+    if (nodes.size === 0) {
+      const client = clients.get(clientId);
+      if (client) send(client.conn, makeFrame(FRAME_TYPES.RESPONSE, {
+        id: frame.id,
+        ok: false,
+        error: { code: ERROR_CODES.NO_NODE, message: "no online node" },
+      }));
+      return;
+    }
+    const record = {
+      clientId,
+      tryAll: true,
+      nodeIds: new Set(nodes.keys()),
+      lastError: null,
+      timer: setTimeout(() => finalizeTryAll(frame.id), config.requestTimeoutMs),
+    };
+    pending.set(frame.id, record);
+    for (const node of nodes.values()) {
+      send(node.conn, makeFrame(FRAME_TYPES.REQUEST, {
+        id: frame.id,
+        method: frame.method,
+        params: frame.params ?? {},
+      }));
+    }
+  }
+
+  function finalizeTryAll(reqId) {
+    const record = pending.get(reqId);
+    if (!record) return;
+    pending.delete(reqId);
+    clearTimeout(record.timer);
+    const client = clients.get(record.clientId);
+    if (client) {
+      send(client.conn, makeFrame(FRAME_TYPES.RESPONSE, {
+        id: reqId,
+        ok: false,
+        error: record.lastError ?? { code: ERROR_CODES.INTERNAL, message: "all nodes failed" },
       }));
     }
   }
@@ -190,6 +262,29 @@ export function createRelay(config, logger = log) {
   function handleResponseFromNode(nodeId, frame) {
     const record = pending.get(frame.id);
     if (!record) return;
+    if (record.tryAll) {
+      record.nodeIds.delete(nodeId);
+      if (frame.ok === true) {
+        // First success wins — cancel the rest and reply immediately.
+        pending.delete(frame.id);
+        clearTimeout(record.timer);
+        const client = clients.get(record.clientId);
+        if (client) {
+          send(client.conn, makeFrame(FRAME_TYPES.RESPONSE, {
+            id: frame.id,
+            ok: true,
+            result: frame.result,
+          }));
+        }
+        return;
+      }
+      // Remember the last error in case every node fails.
+      record.lastError = frame.error ?? { code: ERROR_CODES.INTERNAL, message: "node error" };
+      if (record.nodeIds.size === 0) {
+        finalizeTryAll(frame.id);
+      }
+      return;
+    }
     if (record.aggregate) {
       if (frame.ok === true && Array.isArray(frame.result)) {
         const node = nodes.get(nodeId);
@@ -208,10 +303,24 @@ export function createRelay(config, logger = log) {
     clearTimeout(record.timer);
     const client = clients.get(record.clientId);
     if (client) {
+      // Tag array results (and object results carrying a `rows` array, e.g. the
+      // paginated session.list) with the answering node, so the app can pin
+      // follow-up requests (history/usage/selectModel) even when it requested a
+      // single node directly instead of through the aggregate fan-out.
+      let result = frame.result;
+      if (frame.ok === true) {
+        const node = nodes.get(nodeId);
+        const tag = { nodeId, nodeName: node?.name ?? "", hostname: node?.hostname ?? "" };
+        if (Array.isArray(result)) {
+          result = result.map((item) => ({ ...item, ...tag }));
+        } else if (result && Array.isArray(result.rows)) {
+          result = { ...result, rows: result.rows.map((item) => ({ ...item, ...tag })) };
+        }
+      }
       send(client.conn, makeFrame(FRAME_TYPES.RESPONSE, {
         id: frame.id,
         ok: frame.ok === true,
-        result: frame.result,
+        result,
         error: frame.error,
       }));
     }
@@ -243,6 +352,7 @@ export function createRelay(config, logger = log) {
       nodeId,
       data: {
         ...(frame.data ?? {}),
+        nodeId,
         nodeName: node?.name ?? "",
         hostname: node?.hostname ?? "",
       },

@@ -39,8 +39,22 @@ export class RelayClient {
 
   /** Fired for every relayed event: (event, sessionId, data). */
   onEvent: (event: string, sessionId: string, data: object) => void = () => {};
+  /** Extra event listeners (pages other than the home can subscribe without
+   *  clobbering the home's handler). */
+  private eventListeners: Array<(event: string, sessionId: string, data: object) => void> = [];
   /** Fired when connection state changes: (online, detail). */
   onStatus: (online: boolean, detail: string) => void = () => {};
+
+  addEventListener(cb: (event: string, sessionId: string, data: object) => void): void {
+    this.eventListeners.push(cb);
+  }
+
+  removeEventListener(cb: (event: string, sessionId: string, data: object) => void): void {
+    const idx = this.eventListeners.indexOf(cb);
+    if (idx >= 0) {
+      this.eventListeners.splice(idx, 1);
+    }
+  }
 
   constructor(url: string, token: string, deviceName: string) {
     this.url = url;
@@ -136,6 +150,9 @@ export class RelayClient {
         const ev = frame as EventFrame;
         const data: object = ev.data !== undefined ? ev.data : {} as EmptyParams;
         this.onEvent(ev.event, ev.sessionId ?? '', data);
+        for (const cb of this.eventListeners) {
+          cb(ev.event, ev.sessionId ?? '', data);
+        }
         break;
       }
       case 'ping': {

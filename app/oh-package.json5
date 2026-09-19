@@ -1,6 +1,6 @@
 {
   "modelVersion": "5.0.0",
-  "description": "AITest - FileUploadServer 鸿蒙客户端",
+  "description": "DSH 远程监控 - 鸿蒙客户端",
   "dependencies": {
   },
   "devDependencies": {

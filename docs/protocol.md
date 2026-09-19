@@ -63,14 +63,20 @@ client 发 `request`，relay 路由到 node（默认第一个在线 node，可�
 | method | params | result |
 |---|---|---|
 | `node.list` | — | `[{ id, name, hostname, connectedAt }]`（relay 本地处理） |
-| `workspace.list` | — | `[{ id, path, title, sessionIds, createdAt, updatedAt }]` |
-| `session.list` | `{ workspaceId? }` | `[{ id, createdAt, cwd, live }]` |
+| `workspace.list` | — | `[{ id, path, title, sessionIds, createdAt, updatedAt }]`（relay 聚合所有 node，带 node 标签） |
+| `session.list` | `{ cwd?, limit?, offset? }` | `{ rows: SessionInfo[], hasMore }`。**精确到单个 node**（带 `nodeId` 钉住时只查该节点；不再聚合）。`rows` 内联标题（`title`），每项带 `nodeId/nodeName/hostname` 标签 |
+| `session.title` | `{ sessionId }` | `{ sessionId, title }`（保留的懒加载通道；新 App 已用 `session.list` 内联标题，不再依赖） |
 | `session.history` | `{ sessionId, fromSeq? }` | `{ meta, events: SessionEvent[] }` |
 | `session.create` | `{ cwd?, provider?, model? }` | `{ sessionId, cwd }` |
 | `session.prompt` | `{ sessionId, text }` | `{ ok, sessionId }` |
-| `agent.list` | — | `[{ id, status, sessionId }]` |
+| `session.selectModel` | `{ sessionId, provider, model }` | `{ selected: { provider, model } }` |
+| `session.permission` | `{ sessionId, preset }` | `{ sessionId, switched, preset }` |
+| `question.answer` | `{ sessionId, questionRpcId, answers }` | `{ answered, sessionId, questionRpcId }` |
+| `agent.list` | — | `[{ id, status, sessionId }]`（relay 聚合所有 node，带 node 标签） |
 | `fs.listDir` | `{ path }` | `{ entries: [{ name, type, size? }] }` |
 | `fs.readText` | `{ path, maxBytes? }` | `{ content }` |
+
+> **session.list 分页**（App 拉取模型）：默认 `limit: 20`、`offset: 0`，服务端在固定排序快照（running → live → updatedAt 倒序）上切片，返回 `{ rows, hasMore }`。App 首页每设备一页页拉取（下拉刷新回第 0 页、滚动到底/加载更多按钮取下一页）。标题由插件用 `readTitleSnapshots` 批量内联，不再 N+1 请求。
 
 ## 事件（node → relay → 所有 client）
 
@@ -86,6 +92,10 @@ client 发 `request`，relay 路由到 node（默认第一个在线 node，可�
 | `session.disposed` | `{ sessionId }` | 会话销毁 |
 | `turn.end` | `{ turn, reason }` | **回合完成（弹窗触发）** |
 | `session.event` | `{ event: SessionEvent }` | 原始事件透传（白名单：user/message、assistant/message、tool/call、tool/result、turn/start、todo/write） |
+| `question/requested` | `{ questions: AskUserQuestionItem[] }` | **AI 发起了问题（需要 App 答复）** |
+| `question/resolved` | `{ questionRpcId, outcome }` | 问题已解决（answered / cancelled） |
+| `approval/requested` | `{ approvalId, toolName, callId?, reason? }` | **AI 需要权限审批** |
+| `approval/resolved` | `{ approvalId, outcome }` | 审批已解决 |
 
 ## 心跳
 

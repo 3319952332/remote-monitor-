@@ -16,6 +16,12 @@ export default class EntryAbility extends UIAbility {
     BackgroundTaskService.ensureNotificationEnabled(this.context);
     NotificationService.init(this.context);
     MonitorState.init(this.context);
+    this.captureDeviceKey(want);
+  }
+
+  onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onNewWant');
+    this.captureDeviceKey(want);
   }
 
   onDestroy(): void {
@@ -47,5 +53,21 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onBackground');
     // Keep the relay WebSocket alive while backgrounded.
     MonitorState.setBackgrounded(true);
+  }
+
+  private captureDeviceKey(want: Want): void {
+    const params: Record<string, Object> = want.parameters as Record<string, Object>;
+    const deviceKey: string = (params?.['deviceKey'] ?? '') as string;
+    if (deviceKey.length > 0) {
+      NotificationService.pendingDeviceKey = deviceKey;
+    }
+    const sessionId: string = (params?.['sessionId'] ?? '') as string;
+    if (sessionId.length > 0) {
+      NotificationService.pendingSessionId = sessionId;
+    }
+    const nodeId: string = (params?.['nodeId'] ?? '') as string;
+    if (nodeId.length > 0) {
+      NotificationService.pendingNodeId = nodeId;
+    }
   }
 }

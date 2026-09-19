@@ -16,7 +16,7 @@ function intOf(value, fallback) {
 function loadConfig(env = process.env) {
   return {
     /** Listen host. 0.0.0.0 exposes on all interfaces; 127.0.0.1 is local only. */
-    host: env.DSH_RELAY_HOST ?? "0.0.0.0",
+    host: env.DSH_RELAY_HOST ?? "127.0.0.1",
     /** Listen port. */
     port: intOf(env.DSH_RELAY_PORT, DEFAULT_PORT),
     /** Shared auth token; nodes and clients must present it in their hello. */

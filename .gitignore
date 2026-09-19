@@ -11,6 +11,11 @@ oh_modules/
 .cxx/
 *.har
 *.hsp
+# hvigor junction fix: these are Windows junctions to the DevEco-bundled
+# hvigor packages (repair for the corrupted ~/.hvigor project cache); they are
+# machine-local build glue, never commit their contents
+/hvigor/
+/hvigor-ohos-plugin/
 
 # IDE
 .idea/

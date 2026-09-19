@@ -14,10 +14,14 @@ export interface InlineToken {
 
 /** One block-level element of a rendered document. */
 export interface MarkdownBlock {
-  kind: string; // 'heading' | 'paragraph' | 'code' | 'list' | 'quote'
+  kind: string; // 'heading' | 'paragraph' | 'code' | 'list' | 'quote' | 'table'
   level: number; // heading level (1-6), 0 otherwise
   inlines: InlineToken[];
   code: string; // fenced code block content
+  /** Table: column headers, each cell is an array of inline tokens. */
+  headers?: InlineToken[][];
+  /** Table: data rows, each row is an array of cells, each cell is an array of inline tokens. */
+  rows?: InlineToken[][][];
 }
 
 function pushToken(tokens: InlineToken[], kind: string, text: string, url: string): void {
@@ -163,6 +167,29 @@ export function parseMarkdown(src: string): MarkdownBlock[] {
       continue;
     }
 
+    // Table: a header row followed by a separator row
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      const headerCells = parseTableRow(trimmed);
+      // Look ahead for separator row
+      if (i + 1 < lines.length && isTableSeparator(lines[i + 1].trim())) {
+        i += 2; // skip header + separator
+        const dataRows: InlineToken[][][] = [];
+        while (i < lines.length) {
+          const t = lines[i].trim();
+          if (!t.startsWith('|') || !t.endsWith('|')) {
+            break;
+          }
+          dataRows.push(parseTableRow(t));
+          i++;
+        }
+        const b = block('table');
+        b.headers = headerCells;
+        b.rows = dataRows;
+        blocks.push(b);
+        continue;
+      }
+    }
+
     // Plain paragraph
     const b = block('paragraph');
     b.inlines = parseInline(trimmed);
@@ -170,4 +197,23 @@ export function parseMarkdown(src: string): MarkdownBlock[] {
     i++;
   }
   return blocks;
+}
+
+/** Check whether a trimmed line is a Markdown table separator (e.g. |---|:---:|---|). */
+function isTableSeparator(line: string): boolean {
+  if (!line.startsWith('|') || !line.endsWith('|')) {
+    return false;
+  }
+  const inner = line.slice(1, -1);
+  const cells = inner.split('|');
+  if (cells.length === 0) {
+    return false;
+  }
+  return cells.every((c: string) => /^:?-{3,}:?$/.test(c.trim()));
+}
+
+/** Parse one table row like "| a | **b** | `c` |" into cells of inline tokens. */
+function parseTableRow(line: string): InlineToken[][] {
+  const inner = line.slice(1, -1); // strip leading/trailing |
+  return inner.split('|').map((c: string) => parseInline(c.trim()));
 }

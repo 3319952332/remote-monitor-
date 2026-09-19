@@ -10,9 +10,30 @@
  * Feature-detects `readFrom` so ONE build runs unchanged on both DSH versions.
  * Normalized return: `{ meta, header, events }` (`meta` aliases `header`).
  *
+ * `liveEvents` — bridge for reading a LIVE session's event log across the
+ * DSH 0.1.5 Session API change (`Session.events` removed in favor of
+ * `Session.snapshotEvents()`). Same dependency-free, feature-detect pattern.
+ *
  * Deliberately dependency-free (no `@deepseek-ai/*` imports) so it can be unit
  * tested standalone and never affects the plugin's module graph.
  */
+
+/**
+ * Return a live session's full event log across DSH Session API versions.
+ * DSH 0.1.5 removed `Session.events` in favor of `Session.snapshotEvents()`;
+ * older builds exposed `.events`. Never returns undefined (callers read
+ * `.length` / iterate directly). Fixes "打开聊天会话报错 Cannot read properties
+ * of undefined (reading 'length')" on DSH 0.1.5+.
+ * @param {object|null|undefined} live - live Session from `ctx.sessions.get(id)`.
+ * @returns {object[]} the session's full event log (empty array when absent).
+ */
+export function liveEvents(live) {
+  if (!live) return [];
+  if (typeof live.snapshotEvents === "function") {
+    return live.snapshotEvents();
+  }
+  return Array.isArray(live.events) ? live.events : [];
+}
 
 /**
  * Read one full session log from persistence (cold sessions only; live

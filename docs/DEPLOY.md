@@ -113,7 +113,50 @@ App 完成通知最终配置（`NotificationService.ets`）：
 
 ---
 
-## 6. git
+## 6. 升级节点 DSH 版本（0.1.2-alpha.2 → 0.1.2-rc.1 实测）
+
+节点 DSH 走 npm 全局安装（`~/.npm-global/lib/node_modules/@deepseek-ai/dsh`），升级命令：
+
+```bash
+npm install -g @deepseek-ai/dsh@0.1.2-rc.1 --legacy-peer-deps
+systemctl --user restart dsh-remote
+```
+
+**必踩的坑：升级后服务启动失败 `ERR_MODULE_NOT_FOUND`**（`dsh-app-boot` 找不到
+`@deepseek-ai/cordis-plugin-group`、`dsh-attachment` 等）。
+
+原因：npm 全局装包只装 `dependencies`，不装 `devDependencies`；而 `@deepseek-ai/dsh`
+的 `package.json` 把 `cordis-plugin-group`、`dsh-attachment`、`dsh-settings` 等大量包
+放在 `devDependencies`/`peerDependencies`。升级时 npm 会删掉旧版本树里这些包，导致
+新版本跑不起来。本机（Windows）用的是 dsh-launcher 扁平安装（所有 `@deepseek-ai/*`
+显式列在 versions 的 package.json 里），所以不缺失；Linux 节点的手工 npm 全局安装
+没有这一步。
+
+**修复**（参照本机 launcher 的 versions package.json 依赖清单，把这批 peer 包也装齐，
+并复制进 dsh 自己的 node_modules 使 peer 解析能就地命中）：
+
+```bash
+# 1) 全局补装 peer 包（清单 = 本机 dsh-launcher versions/<ver>/package.json 里
+#    @deepseek-ai/* 减去 dsh 本身）
+npm install -g @deepseek-ai/cordis-plugin-group@^1.0.2 @deepseek-ai/dsh-attachment@^0.1.2-rc.1 ... --legacy-peer-deps
+
+# 2) 把这些包复制进 dsh 包内 node_modules（否则全局顶层的包解析不到 cordis 等）
+DEST=~/.npm-global/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai
+for d in ~/.npm-global/lib/node_modules/@deepseek-ai/*/; do
+  name=$(basename "$d"); [ "$name" = dsh ] && continue
+  [ -d "$DEST/$name" ] || cp -r "$d" "$DEST/"
+done
+
+# 3) 重启验证：relay 日志出现 `node online: laowang@ubuntu` 即恢复
+systemctl --user restart dsh-remote
+```
+
+> 不要用 `cd <dsh>/ && npm install` 装 devDependencies —— devDeps 里含未发布的
+> `@deepseek-ai/dsh-experimental-*` 包，npm 会 404 失败。直接按上面复制即可。
+
+---
+
+## 7. git
 
 - 仓库根：`E:\Code\Huawei\dsh-remote`，remote `git@github.com:3319952332/remote-monitor-.git`。
 - 提交前跑一遍敏感信息扫描：token / `192.168.` / 密码（见 `app/build-profile.json5` 已被 gitignore）。
