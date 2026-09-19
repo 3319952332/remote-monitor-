@@ -43,3 +43,8 @@ app/build-profile.json5
 # Local relay connection config (real URL/token) + generated ArkTS constants
 app/relay-config.local.json
 app/entry/src/main/ets/services/RelayConfig.ets
+
+# Throwaway relay probes: several of them hardcoded the relay token, so they
+# were scrubbed from history (2026-09-19) and must never be tracked again.
+# Use DSH_RELAY_TOKEN from the environment in any new probe.
+relay/test/
