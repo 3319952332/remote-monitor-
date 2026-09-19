@@ -138,7 +138,7 @@ push-type: 0
 ```
 DSH_RELAY_SERVICE_ACCOUNT=/etc/dsh-relay-service-account.json
 DSH_RELAY_PUSH_PROJECT_ID=101653523865089045
-DSH_RELAY_PUSH_CATEGORY=MARKETING      # 自分类权益批下来后改 WORK
+DSH_RELAY_PUSH_CATEGORY=WORK            # 自分类权益已获批
 ```
 
 ---
@@ -184,13 +184,34 @@ DSH_RELAY_PUSH_CATEGORY=MARKETING      # 自分类权益批下来后改 WORK
 2. ✅ AGC 控制台 / relay 真实推送能到手机
 3. ✅ relay REST 鉴权返回 `80000000`（服务端打通）
 4. ✅ **杀掉 App 后触发回合结束 → 通知栏出现推送**（`[push] sent to odid-…`）
-5. ⏸ 申请自分类权益（`WORK`）→ 通知变为有声+横幅
+5. ✅ 申请自分类权益（`WORK`）→ 通知有声
+6. ✅ 后台态送达（socket 已断、进程仍在）
+7. ✅ 关闭后台常驻后仍可达
+
+## 八、排查「推送到但不响」
+
+**先看 `SetFlags-final` 的 `deviceType`，别只看 `flags` 数字。**
+
+```powershell
+hdc shell hilog -x | grep -E 'SetFlags-final|smart switch|liteWearable'
+```
+
+| 日志特征 | 含义 |
+|---|---|
+| `flags = 63  deviceType: current` | 正常满档（提示音+振动+横幅） |
+| `smart switch deviceType = liteWearable status = 1`，`flags` 降到 `32` | **被转投到华为手表**，去查手表的免打扰/开关 |
+| `app switch is closed, deveiceType = liteWearable` | 转投已关，通知留在手机 |
+| `silent = 2` | 手机在静音/振动档 |
+
+**实战教训**：曾出现「解锁响、锁屏不响、时而响时而不响」，连续误判为「手机静音」「锁屏把 `slotType: 1` 降级」「App 通知开关没开」，真因是**手表转投 + 手表免打扰**。
+
+> `slotType: 1` = `SOCIAL_COMMUNICATION`，SDK 标注对应 `SlotLevel.LEVEL_HIGH`，看到它**不代表**被降级。
 
 ---
 
-## 八、其他记录
+## 九、其他记录
 
-- 消息分类选「**工作事项提醒**」(`category: "WORK"`) →「用户主动设置的提醒」，别用默认的营销类（静默 + 2~5 条/日限流）。**`WORK` 需先在 AGC 申请自分类权益**；未获批前只能发 `MARKETING`（能到但静默），所以当前 relay 配置用 `MARKETING`，权益下来后改环境变量即可，代码无需动。
+- 消息分类选「**工作事项提醒**」(`category: "WORK"`) →「用户主动设置的提醒」，别用默认的营销类（静默 + 2~5 条/日限流）。**`WORK` 需先在 AGC 申请自分类权益**；未获批前只能发 `MARKETING`（能到但静默）。**已获批，当前用 `WORK`。**
 - 推送 Token 长度会变，**不要写死长度判断**。
 - Push Token 在「卸载重装 / 恢复出厂 / 调用 deleteToken / 离开国家地区」后才变化。
 - AGC 控制台测试推送需手动填 Token；「有效到达数」要等设备回执，不实时。

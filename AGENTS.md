@@ -105,7 +105,30 @@ ws.on('error', (_err: BusinessError) => {
 2. **JWT 用 RS256**，官方文档写的 PS256 会被 OAuth 端点拒绝（`jwt verify error`）。
 3. **请求体外层是 `payload`+`target`**，且 `clickAction` 必填，缺了报 `80100003`。
 
-> 通知「响不响」取决于消息分类：默认（营销类）静默，需申请自分类权益才能用 `WORK`（有声+横幅）。当前发的是 `MARKETING`，能到但静默。
+> 通知「响不响」取决于消息分类：默认（营销类）静默。**已申请到自分类权益，当前 `DSH_RELAY_PUSH_CATEGORY=WORK`**，通知有声。改分类只需改服务器环境变量，代码不用动。
+
+### 排查「推送到了但不响」
+
+**先看 `SetFlags-final` 的 `deviceType`，不要只看 `flags` 数字。** 命令：
+
+```powershell
+hdc shell hilog -x | grep -E 'SetFlags-final|smart switch|liteWearable'
+```
+
+判读：
+
+| 日志特征 | 含义 |
+|---|---|
+| `flags = 63  deviceType: current` | 正常满档（提示音+振动+横幅） |
+| `smart switch deviceType = liteWearable status = 1` 且 `flags` 降到 `32` | **被转投到手表**，去查手表（免打扰/开关），与 App 无关 |
+| `app switch is closed, deveiceType = liteWearable` | 转投已关，通知留在手机，正常 |
+| `silent = 2` | 手机在静音/振动档 |
+
+**踩过的坑（2026-09-19，绕了三四轮的教训）**：现象是「解锁响、锁屏不响、时而响时而不响」。先后误判为「手机静音」「锁屏策略把 `slotType: 1` 降级」「App 的通知开关没开」，全都错。真因是**华为手表**：系统的智能设备转投把通知送给了手表（`liteWearable`），而手表开着免打扰 → 两边都不响，手机只安静展示。
+
+关键教训：**`deviceType: liteWearable` 一直在日志里，`flags` 也从 63/53 降到 32，但只顾着比 `flags` 大小、没看旁边的 `deviceType`。** 排查这类问题应先读完整判定链（`SetFlags-init` → `SetFlags-control` → `SetFlags-final`），而不是只盯一个数字。
+
+另外注意：`slotType: 1` 是 `SOCIAL_COMMUNICATION`，SDK 明确标注对应 `SlotLevel.LEVEL_HIGH` —— 看到 `slotType: 1` **不代表**被降级。
 
 `relay/src/notifiers.js` 的 webhook 通道仍然保留可用（配 `DSH_RELAY_NOTIFIERS`），但已不作为主方案。
 
