@@ -29,9 +29,9 @@
         "startWindowIcon": "$media:icon",
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
-        "backgroundModes": [
-          "dataTransfer"
-        ],
+        // 已移除 "backgroundModes": ["dataTransfer"]：不再用长时任务常驻后台，
+        // 离线送达改由 Push Kit 负责。恢复后台保活时需连同
+        // ohos.permission.KEEP_BACKGROUND_RUNNING 一起加回。
         "skills": [
           {
             "entities": [
@@ -50,16 +50,6 @@
     "requestPermissions": [
       {
         "name": "ohos.permission.INTERNET"
-      },
-      {
-        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING",
-        "reason": "$string:keep_background_reason",
-        "usedScene": {
-          "abilities": [
-            "EntryAbility"
-          ],
-          "when": "inuse"
-        }
       }
     ]
   }

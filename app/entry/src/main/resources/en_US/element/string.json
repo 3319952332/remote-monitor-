@@ -11,10 +11,6 @@
     {
       "name": "EntryAbility_label",
       "value": "DSH Monitor"
-    },
-    {
-      "name": "keep_background_reason",
-      "value": "Keep running in background to receive session completion notifications"
     }
   ]
 }

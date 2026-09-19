@@ -1,7 +1,6 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
-import { BackgroundTaskService } from '../services/BackgroundTaskService';
 import { DeviceIdService } from '../services/DeviceIdService';
 import { MonitorState } from '../services/MonitorState';
 import { NotificationService } from '../services/NotificationService';
@@ -14,9 +13,10 @@ export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
-    // Ask for notification permission up front (foreground), so both the
-    // continuous-task notice and session-completion notice can post later.
-    BackgroundTaskService.ensureNotificationEnabled(this.context);
+    // Ask for notification permission up front (foreground): the completion
+    // notice and the Push Kit delivered messages both need it. This is the
+    // plain notification permission — not the background-running one.
+    NotificationService.ensureEnabled(this.context);
     NotificationService.init(this.context);
     MonitorState.init(this.context);
     this.initIdentity();

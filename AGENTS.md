@@ -109,8 +109,16 @@ ws.on('error', (_err: BusinessError) => {
 
 `relay/src/notifiers.js` 的 webhook 通道仍然保留可用（配 `DSH_RELAY_NOTIFIERS`），但已不作为主方案。
 
+### 后台保活：已关闭
+
+**不再使用长时任务常驻后台。** Push Kit 打通后，App 进后台就让系统正常挂起、socket 断开，离线送达交给推送。
+
+- 开关：`app/entry/src/main/ets/services/MonitorState.ets` 的 `KEEP_ALIVE_IN_BACKGROUND`（当前 `false`）。`BackgroundTaskService.ets` 保留未删，置 `true` 即可恢复。
+- 同时从 `module.json5` 移除了 `backgroundModes: ["dataTransfer"]` 与 `ohos.permission.KEEP_BACKGROUND_RUNNING`，以及三份 `keep_background_reason` 字符串 —— **恢复保活时这两处也要一起加回**（开关单独打开不生效）。
+- 实测行为：进后台后 socket 数秒内断开（`client offline`），进程仍在；此后 `turn.end` 走推送送达。
+- 注意 `NotificationService.ensureEnabled()` 是**通知权限**，与后台保活无关，不能一起关。
+
 ### 其他
 
 - `app/oh-package.json5` 的 description 曾残留文件管家工程文本，已于 2026-09-19 修正
-- 长时任务（`DATA_TRANSFER`）用于维持 WebSocket，长时任务非永生，系统仍可能回收进程
 - plugin 依赖 DSH `0.1.0-rc.x` 内部 API（如 `sessionPersistence`），DSH 升级可能破坏兼容性

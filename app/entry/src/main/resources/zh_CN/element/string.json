@@ -11,10 +11,6 @@
     {
       "name": "EntryAbility_label",
       "value": "DSH 监控"
-    },
-    {
-      "name": "keep_background_reason",
-      "value": "保持后台连接以接收会话完成通知"
     }
   ]
 }
